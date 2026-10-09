@@ -121,7 +121,10 @@
             {{ slotSeleccionado.motivos.join(' ') }}
           </p>
           <p v-if="availabilityError" class="form-error" role="alert">{{ availabilityError }}</p>
-          <p v-if="mensaje" class="success-message" role="status">{{ mensaje }}</p>
+          <div v-if="mensaje" class="booking-success" role="status" aria-live="polite">
+            <strong>¡Cita creada correctamente!</strong>
+            <span>{{ mensaje }}</span>
+          </div>
           <p v-if="errorReserva" class="form-error" role="alert">{{ errorReserva }}</p>
 
           <section v-if="slotSeleccionado?.disponible && servicioSeleccionado && estilistaSeleccionado" class="booking-summary" aria-live="polite">
@@ -353,7 +356,7 @@ async function registrarCita() {
     if (!response.ok) throw new Error(resultado.error || 'No se pudo agendar la cita');
 
     await Promise.all([consultarDisponibilidad(), cargarMisCitas()]);
-    mensaje.value = 'Solicitud guardada en la base de datos. El estilista debe aceptarla para confirmar la cita.';
+    mensaje.value = 'Tu solicitud quedó pendiente de aceptación del estilista.';
   } catch (error) {
     await consultarDisponibilidad();
     errorReserva.value = error.message || 'No se pudo conectar con el servidor.';
@@ -425,6 +428,9 @@ onMounted(async () => {
 .booking-summary { padding: 16px; border: 1px solid #d6eadc; border-radius: 12px; background: #f3fbf5; color: #365340; }
 .booking-summary h2 { margin: 0 0 10px; font-size: 1rem; }
 .booking-summary p { margin: 5px 0; font-size: .9rem; }
+.booking-success { display: grid; gap: 5px; padding: 14px 16px; border: 1px solid #b9dfc5; border-radius: 11px; background: #f0faf3; color: #28764b; line-height: 1.5; }
+.booking-success strong { font-size: 1rem; }
+.booking-success span { font-size: .9rem; }
 .busy-warning { margin: 0; padding: 12px 14px; border-radius: 10px; background: #fff2e4; color: #835415; font-size: .9rem; line-height: 1.5; }
 .success-message { color: #28764b; line-height: 1.5; }
 .my-appointments { margin-top: 22px; }

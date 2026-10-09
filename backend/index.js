@@ -185,11 +185,16 @@ async function registrarCuenta(req, res, rolForzado) {
     especialidad
   } = req.body;
   const rol = rolForzado || req.body.rol || 'cliente';
+  const nombreCompleto = typeof nombre === 'string' ? nombre.trim().replace(/\s+/g, ' ') : '';
+  const partesNombre = nombreCompleto.split(' ').filter(Boolean);
   const correoNormalizado = String(email || correo || '').trim().toLowerCase();
   const passwordPlano = password || contraseña;
 
-  if (!nombre?.trim() || !correoNormalizado || !passwordPlano) {
-    return res.status(400).json({ error: 'Nombre, correo y contraseña son obligatorios.' });
+  if (partesNombre.length < 2) {
+    return res.status(400).json({ error: 'Escribe al menos un nombre y un apellido.' });
+  }
+  if (!correoNormalizado || !passwordPlano) {
+    return res.status(400).json({ error: 'El correo y la contraseña son obligatorios.' });
   }
   if (passwordPlano.length < 8) {
     return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres.' });
@@ -220,7 +225,7 @@ async function registrarCuenta(req, res, rolForzado) {
     if (estilistaExistente) {
       return res.status(409).json({ error: 'Ya existe un estilista registrado con ese correo.' });
     }
-    const nombreExistente = await Estilista.findOne({ nombre: nombre.trim() })
+    const nombreExistente = await Estilista.findOne({ nombre: nombreCompleto })
       .collation({ locale: 'es', strength: 2 })
       .select('_id');
     if (nombreExistente) {
@@ -233,7 +238,7 @@ async function registrarCuenta(req, res, rolForzado) {
   try {
     await sesion.withTransaction(async () => {
       const [usuario] = await Usuario.create([{
-        nombre: nombre.trim(),
+        nombre: nombreCompleto,
         email: correoNormalizado,
         correo: correoNormalizado,
         passwordHash: await bcrypt.hash(passwordPlano, 12),
@@ -245,14 +250,14 @@ async function registrarCuenta(req, res, rolForzado) {
       if (rol === 'cliente') {
         await Cliente.create([{
           userId: usuario._id,
-          nombre: nombre.trim(),
+          nombre: nombreCompleto,
           telefono: telefono.trim(),
           email: correoNormalizado
         }], { session: sesion });
       } else {
         await Estilista.create([{
           userId: usuario._id,
-          nombre: nombre.trim(),
+          nombre: nombreCompleto,
           email: correoNormalizado,
           especialidad: especialidad.trim(),
           edad: 25,

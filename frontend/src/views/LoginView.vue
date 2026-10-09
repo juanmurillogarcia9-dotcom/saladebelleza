@@ -13,8 +13,8 @@
 
       <form :key="`${registrando}-${rol}`" class="auth-form" autocomplete="off" @submit.prevent="enviar">
         <label v-if="registrando">
-          Nombre completo
-          <input v-model.trim="form.nombre" autocomplete="off" required />
+          Nombre y apellido
+          <input v-model.trim="form.nombre" autocomplete="name" required pattern=".*\s+.*" title="Escribe al menos un nombre y un apellido." />
         </label>
         <label>
           Correo electrónico
@@ -114,12 +114,19 @@ function limpiarFormulario() {
 
 async function enviar() {
   if (enviando.value) return; // Evita clics múltiples que dupliquen registros
-  enviando.value = true
   error.value = ''
+
+  const nombreCompleto = form.nombre.trim().replace(/\s+/g, ' ')
+  if (registrando.value && nombreCompleto.split(' ').filter(Boolean).length < 2) {
+    error.value = 'Escribe al menos un nombre y un apellido.'
+    return
+  }
+
+  enviando.value = true
   
   try {
     const datos = { 
-      nombre: form.nombre,
+      nombre: nombreCompleto,
       email: form.email, 
       password: form.password, 
       rol: rol.value,
