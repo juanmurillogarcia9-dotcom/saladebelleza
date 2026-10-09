@@ -121,10 +121,6 @@
             {{ slotSeleccionado.motivos.join(' ') }}
           </p>
           <p v-if="availabilityError" class="form-error" role="alert">{{ availabilityError }}</p>
-          <div v-if="mensaje" class="booking-success" role="status" aria-live="polite">
-            <strong>¡Cita creada correctamente!</strong>
-            <span>{{ mensaje }}</span>
-          </div>
           <p v-if="errorReserva" class="form-error" role="alert">{{ errorReserva }}</p>
 
           <section v-if="slotSeleccionado?.disponible && servicioSeleccionado && estilistaSeleccionado" class="booking-summary" aria-live="polite">
@@ -148,11 +144,20 @@
       </div>
 
     </div>
+    <Teleport to="body">
+      <div v-if="mensaje" class="booking-toast" role="status" aria-live="polite">
+        <span class="booking-toast-icon" aria-hidden="true">✓</span>
+        <span>
+          <strong>¡Cita agendada correctamente!</strong>
+          <small>{{ mensaje }}</small>
+        </span>
+      </div>
+    </Teleport>
   </q-page>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useAuthStore } from '../stores/authStore';
 import { API_URL } from '../config/api';
 import { normalizarEspecialidad, presentarServicio } from '../config/servicios';
@@ -174,6 +179,7 @@ const errorAgendaSemanal = ref('');
 const guardando = ref(false);
 let solicitudDisponibilidad = 0;
 let solicitudAgendaSemanal = 0;
+let mensajeTimer;
 const hoy = new Date();
 const fechaMinima = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
 
@@ -290,7 +296,6 @@ async function consultarDisponibilidad() {
   disponibilidad.value = null;
   availabilityError.value = '';
   avisoAgenda.value = '';
-  mensaje.value = '';
   errorReserva.value = '';
   if (!form.value.servicioId || !form.value.estilistaId || !form.value.fecha) {
     cargandoDisponibilidad.value = false;
@@ -332,6 +337,7 @@ async function registrarCita() {
   guardando.value = true;
   errorReserva.value = '';
   mensaje.value = '';
+  if (mensajeTimer) clearTimeout(mensajeTimer);
   try {
     const response = await fetch(`${API_URL}/citas`, {
       method: 'POST',
@@ -355,8 +361,12 @@ async function registrarCita() {
     const resultado = await response.json();
     if (!response.ok) throw new Error(resultado.error || 'No se pudo agendar la cita');
 
-    await Promise.all([consultarDisponibilidad(), cargarMisCitas()]);
+    await consultarDisponibilidad();
     mensaje.value = 'Tu solicitud quedó pendiente de aceptación del estilista.';
+    mensajeTimer = setTimeout(() => {
+      mensaje.value = '';
+      mensajeTimer = undefined;
+    }, 4000);
   } catch (error) {
     await consultarDisponibilidad();
     errorReserva.value = error.message || 'No se pudo conectar con el servidor.';
@@ -364,6 +374,10 @@ async function registrarCita() {
     guardando.value = false;
   }
 }
+
+onUnmounted(() => {
+  if (mensajeTimer) clearTimeout(mensajeTimer);
+});
 
 watch(
   () => [form.value.servicioId, form.value.estilistaId, form.value.fecha],
@@ -428,9 +442,12 @@ onMounted(async () => {
 .booking-summary { padding: 16px; border: 1px solid #d6eadc; border-radius: 12px; background: #f3fbf5; color: #365340; }
 .booking-summary h2 { margin: 0 0 10px; font-size: 1rem; }
 .booking-summary p { margin: 5px 0; font-size: .9rem; }
-.booking-success { display: grid; gap: 5px; padding: 14px 16px; border: 1px solid #b9dfc5; border-radius: 11px; background: #f0faf3; color: #28764b; line-height: 1.5; }
-.booking-success strong { font-size: 1rem; }
-.booking-success span { font-size: .9rem; }
+.booking-toast { position: fixed; z-index: 10000; top: 24px; right: 24px; display: flex; align-items: center; gap: 12px; width: min(380px, calc(100vw - 32px)); padding: 16px 18px; border: 1px solid #b9dfc5; border-radius: 12px; background: #f0faf3; color: #28764b; box-shadow: 0 12px 36px rgba(35, 70, 45, .2); animation: booking-toast-in .25s ease-out; }
+.booking-toast > span:last-child { display: grid; gap: 4px; }
+.booking-toast strong { font-size: .95rem; }
+.booking-toast small { color: #456b51; font-size: .82rem; line-height: 1.4; }
+.booking-toast-icon { display: grid; flex: 0 0 30px; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: #28764b; color: white; font-weight: 700; }
+@keyframes booking-toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 .busy-warning { margin: 0; padding: 12px 14px; border-radius: 10px; background: #fff2e4; color: #835415; font-size: .9rem; line-height: 1.5; }
 .success-message { color: #28764b; line-height: 1.5; }
 .my-appointments { margin-top: 22px; }
@@ -458,6 +475,7 @@ onMounted(async () => {
 .btn-esther:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 .full-width { width: 100%; }
 @media (max-width: 600px) {
+  .booking-toast { top: 12px; right: 12px; }
   .esther-card { padding: 24px 18px; }
   .weekly-agenda-heading { align-items: flex-start; flex-direction: column; }
   .weekly-agenda-days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
