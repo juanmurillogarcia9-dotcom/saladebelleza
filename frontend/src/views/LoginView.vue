@@ -4,45 +4,43 @@
     <section class="auth-panel">
       <p class="eyebrow">Salón Esther</p>
       <h1>{{ registrando ? 'Crear cuenta' : 'Iniciar sesión' }}</h1>
-      <p class="auth-intro">{{ registrando ? 'Crea tu cuenta y registra tus datos.' : `Ingresa a tu espacio de ${rol === 'cliente' ? 'cliente' : 'estilista'}.` }}</p>
+      <p class="auth-intro">{{ registrando ? 'Crea tu cuenta de cliente y registra tus datos para reservar.' : 'Ingresa a tu espacio personal.' }}</p>
 
       <div class="role-switch" role="group" aria-label="Tipo de perfil">
-        <button type="button" :aria-pressed="rol === 'cliente'" :class="{ selected: rol === 'cliente' }" @click="seleccionarRol('cliente')">Cliente</button>
-        <button type="button" :aria-pressed="rol === 'estilista'" :class="{ selected: rol === 'estilista' }" @click="seleccionarRol('estilista')">Estilista</button>
+        <button type="button" :aria-pressed="rol === 'cliente'" :class="{ selected: rol === 'cliente' }" @click="rol = 'cliente'">Cliente</button>
+        <button type="button" :aria-pressed="rol === 'estilista'" :class="{ selected: rol === 'estilista' }" @click="rol = 'estilista'">Estilista</button>
       </div>
 
-      <form :key="`${registrando}-${rol}`" class="auth-form" autocomplete="off" @submit.prevent="enviar">
+      <form class="auth-form" @submit.prevent="enviar">
         <label v-if="registrando">
-          Nombre y apellido
-          <input v-model.trim="form.nombre" autocomplete="name" required pattern=".*\s+.*" title="Escribe al menos un nombre y un apellido." />
+          Nombre completo
+          <input v-model.trim="form.nombre" autocomplete="name" required />
         </label>
         <label>
           Correo electrónico
-          <input v-model.trim="form.email" type="email" :autocomplete="registrando ? 'email' : 'off'" required />
+          <input v-model.trim="form.email" type="email" autocomplete="email" required />
         </label>
         <label>
           Contraseña
-          <input v-model="form.password" type="password" :autocomplete="registrando ? 'new-password' : 'off'" :minlength="registrando ? 8 : undefined" required />
+          <input v-model="form.password" type="password" :autocomplete="registrando ? 'new-password' : 'current-password'" :minlength="registrando ? 8 : undefined" required />
         </label>
         <label v-if="registrando && rol === 'cliente'">
           Teléfono
           <input v-model.trim="form.telefono" type="tel" autocomplete="tel" required />
         </label>
-        <div v-if="registrando && rol === 'estilista'" class="specialty-field">
-          <label for="specialty">Especialidad</label>
-          <select id="specialty" v-model="form.especialidad" required>
-            <option disabled value="">
-              {{ cargandoServicios ? 'Cargando servicios...' : 'Selecciona una especialidad' }}
-            </option>
-            <option v-for="servicio in servicios" :key="servicio.id" :value="servicio.nombre">
-              {{ servicio.nombre }}
-            </option>
-          </select>
-          <p v-if="errorServicios" class="form-error" role="alert">{{ errorServicios }}</p>
-        </div>
+        <template v-if="registrando && rol === 'estilista'">
+          <label>
+            Especialidad
+            <input v-model.trim="form.especialidad" required />
+          </label>
+          <label>
+            Código de invitación
+            <input v-model="form.codigoInvitacion" type="password" required />
+          </label>
+        </template>
 
         <p v-if="error" class="form-error" role="alert">{{ error }}</p>
-        <button class="submit-button" type="submit" :disabled="enviando || (registrando && rol === 'estilista' && (cargandoServicios || !servicios.length))">
+        <button class="submit-button" type="submit" :disabled="enviando">
           {{ enviando ? 'Procesando...' : registrando ? 'Crear cuenta' : 'Entrar' }}
         </button>
       </form>
@@ -55,92 +53,48 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
-import { API_URL } from '../config/api'
 
 const router = useRouter()
-const route = useRoute()
 const auth = useAuthStore()
 const registrando = ref(false)
 const enviando = ref(false)
 const error = ref('')
-const errorServicios = ref('')
-const cargandoServicios = ref(true)
-const rol = ref(route.query.rol === 'estilista' ? 'estilista' : 'cliente')
-const servicios = ref([])
+const rol = ref('cliente')
 const form = reactive({
   nombre: '',
   email: '',
   password: '',
   telefono: '',
-  especialidad: ''
-})
-
-onMounted(async () => {
-  try {
-    const response = await fetch(`${API_URL}/servicios`)
-    if (!response.ok) throw new Error('No se pudieron cargar las especialidades. Intenta recargar la página.')
-    servicios.value = await response.json()
-  } catch (err) {
-    errorServicios.value = err.message || 'No se pudieron cargar las especialidades.'
-  } finally {
-    cargandoServicios.value = false
-  }
+  especialidad: '',
+  codigoInvitacion: ''
 })
 
 function cambiarModo() {
   registrando.value = !registrando.value
-  limpiarFormulario()
-}
-
-function seleccionarRol(nuevoRol) {
-  if (rol.value === nuevoRol) return
-  rol.value = nuevoRol
-  limpiarFormulario()
-}
-
-function limpiarFormulario() {
-  Object.assign(form, {
-    nombre: '',
-    email: '',
-    password: '',
-    telefono: '',
-    especialidad: ''
-  })
   error.value = ''
 }
 
 async function enviar() {
-  if (enviando.value) return; // Evita clics múltiples que dupliquen registros
-  error.value = ''
-
-  const nombreCompleto = form.nombre.trim().replace(/\s+/g, ' ')
-  if (registrando.value && nombreCompleto.split(' ').filter(Boolean).length < 2) {
-    error.value = 'Escribe al menos un nombre y un apellido.'
-    return
-  }
-
   enviando.value = true
-  
+  error.value = ''
   try {
-    const datos = { 
-      nombre: nombreCompleto,
-      email: form.email, 
-      password: form.password, 
-      rol: rol.value,
-      telefono: form.telefono,
-      especialidad: form.especialidad
-    }
-    
+    const datos = { email: form.email, password: form.password, rol: rol.value }
     if (registrando.value) {
+      Object.assign(datos, {
+        nombre: form.nombre,
+        telefono: form.telefono,
+        especialidad: form.especialidad,
+        codigoInvitacion: form.codigoInvitacion
+      })
       await auth.registrarse(datos)
     } else {
       await auth.iniciarSesion(datos)
     }
-
-    await router.replace(auth.usuario?.rol === 'estilista' ? '/' : '/agendar')
+    // Redirección directa a la sección Nosotros tras registrarse o iniciar sesión
+    await router.replace('/nosotros')
   } catch (err) {
     error.value = err.message
   } finally {
@@ -161,9 +115,8 @@ h1 { margin: 0; color: #292525; font: 700 2rem/1.15 'Playfair Display', Georgia,
 .role-switch button.selected { border-color: #b3637e; color: #8e4059; }
 .auth-form { display: grid; gap: 16px; margin-top: 22px; }
 .auth-form label { display: grid; gap: 7px; color: #554b4a; font-size: .88rem; font-weight: 600; }
-.auth-form input, .auth-form select { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #d8cdca; border-radius: 4px; background: #fff; color: #292525; font: inherit; }
-.auth-form input:focus, .auth-form select:focus { outline: 2px solid #b3637e; outline-offset: 1px; }
-.specialty-field { display: grid; gap: 7px; color: #554b4a; font-size: .88rem; font-weight: 600; }
+.auth-form input { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #d8cdca; border-radius: 4px; background: #fff; color: #292525; font: inherit; }
+.auth-form input:focus { outline: 2px solid #b3637e; outline-offset: 1px; }
 .form-error { margin: 0; color: #a32d3d; font-size: .9rem; }
 .submit-button { min-height: 46px; border: 0; border-radius: 4px; background: #8f455e; color: #fff; font-weight: 700; cursor: pointer; }
 .submit-button:disabled { opacity: .65; cursor: wait; }

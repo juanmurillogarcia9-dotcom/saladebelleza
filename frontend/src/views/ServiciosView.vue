@@ -14,20 +14,15 @@
           <div class="esther-card">
             <!-- Imagen superior ajustada a la tarjeta -->
             <div class="card-image-container">
-              <img :src="servicio.imagen" :alt="`Servicio de ${servicio.nombre}`" class="service-img" loading="lazy" />
+              <img :src="servicio.imagen" :alt="servicio.nombre" class="service-img" />
             </div>
 
             <!-- Contenido de la tarjeta -->
             <div class="card-content flex column justify-between">
               <div>
-                <span class="service-category">{{ servicio.categoria }}</span>
                 <div class="text-h6 text-pink luxury-heading text-weight-bold q-mb-sm">{{ servicio.nombre }}</div>
-                <p class="service-description">{{ servicio.descripcion }}</p>
-                <h3 class="includes-title">Tu experiencia incluye</h3>
-                <ul class="includes-list">
-                  <li v-for="detalle in servicio.incluye" :key="detalle">{{ detalle }}</li>
-                </ul>
-                <p class="duration-line">Duración aproximada: {{ servicio.duracionMinutos }} minutos</p>
+                <p class="text-muted text-body2 q-mb-lg" style="line-height: 1.6;">{{ servicio.descripcion }}</p>
+                <p class="duration-line">{{ servicio.duracionMinutos }} minutos</p>
               </div>
               <div class="text-center">
                 <span class="price-tag">{{ servicio.precio }}</span>
@@ -42,17 +37,29 @@
 
 <script setup>
 import { onMounted, ref } from 'vue';
-import { API_URL } from '../config/api';
-import { presentarServicio } from '../config/servicios';
 
 const servicios = ref([]);
+const presentacion = {
+  'corte-signature': {
+    descripcion: 'Corte personalizado acorde a la forma de tu rostro y asesoramiento de imagen profesional.',
+    imagen: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&q=80&w=800'
+  },
+  'coloracion-balayage': {
+    descripcion: 'Técnicas avanzadas de iluminación con productos de alta gama que nutren tu cabello.',
+    imagen: 'https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?auto=format&fit=crop&q=80&w=800'
+  },
+  'manicure-pedicure-spa': {
+    descripcion: 'Cuidado completo de manos y pies con esmaltado semipermanente de larga duración.',
+    imagen: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&q=80&w=800'
+  }
+};
 
 onMounted(async () => {
   try {
-    const response = await fetch(`${API_URL}/servicios`);
+    const response = await fetch('http://localhost:4000/api/servicios');
     if (!response.ok) throw new Error('No se pudo cargar el catálogo');
     const catalogo = await response.json();
-    servicios.value = catalogo.map(presentarServicio);
+    servicios.value = catalogo.map((servicio) => ({ ...servicio, ...presentacion[servicio.id] }));
   } catch (error) {
     console.error('Error al cargar servicios:', error);
   }
@@ -120,17 +127,6 @@ onMounted(async () => {
   color: #5c5559 !important; 
 }
 .duration-line { color: #8f455e; font-size: 0.85rem; font-weight: 700; }
-.service-category {
-  display: inline-block;
-  margin-bottom: 9px;
-  color: #9a536a;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 1.1px;
-}
-.service-description { margin: 0 0 16px; color: #5c5559; font-size: .92rem; line-height: 1.65; }
-.includes-title { margin: 0 0 8px; color: #393236; font-size: .9rem; font-weight: 700; }
-.includes-list { display: grid; gap: 6px; margin: 0 0 16px; padding-left: 19px; color: #5c5559; font-size: .85rem; line-height: 1.45; }
 
 /* Tarjeta principal */
 .esther-card {

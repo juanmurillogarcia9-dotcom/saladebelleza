@@ -25,7 +25,7 @@
 
               <div v-if="clientes.length === 0" class="empty-state">
                 <span class="empty-icon">🌸</span>
-                <p class="text-muted">{{ errorCarga || 'No hay clientes registrados en el sistema todavía.' }}</p>
+                <p class="text-muted">No hay clientes registrados en el sistema todavía.</p>
               </div>
             </div>
           </div>
@@ -51,13 +51,9 @@
                 <label class="input-label">Correo electrónico</label>
                 <input v-model="nuevo.email" type="email" placeholder="Ej. sofia@email.com" class="luxury-input" required />
               </div>
-              <p v-if="error" class="form-error" role="alert">{{ error }}</p>
-              <p v-if="mensaje" class="form-success" role="status">{{ mensaje }}</p>
               
               <div class="q-mt-md">
-                <button type="submit" class="btn-esther full-width" :disabled="guardando">
-                  {{ guardando ? 'Guardando...' : 'Registrar Cliente' }}
-                </button>
+                <button type="submit" class="btn-esther full-width">Registrar Cliente</button>
               </div>
             </form>
           </div>
@@ -70,50 +66,35 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useAuthStore } from '../stores/authStore';
-import { API_URL } from '../config/api';
 
 const clientes = ref([]);
 const nuevo = ref({ nombre: '', telefono: '', email: '' });
 const auth = useAuthStore();
-const error = ref('');
-const errorCarga = ref('');
-const mensaje = ref('');
-const guardando = ref(false);
 
 const cargarClientes = async () => {
   try {
-    const res = await fetch(`${API_URL}/clientes`, {
+    const res = await fetch('http://localhost:4000/api/clientes', {
       headers: auth.encabezadosAutenticados()
     });
-    if (!res.ok) throw new Error('No se pudo cargar el directorio de clientes.');
     clientes.value = await res.json();
-    errorCarga.value = '';
-  } catch (err) {
-    errorCarga.value = err.message || 'No se pudo cargar el directorio de clientes.';
-    console.error('Error al cargar clientes:', err);
+  } catch (error) {
+    console.error("Error al cargar clientes:", error);
   }
 };
 
 const agregarCliente = async () => {
-  if (guardando.value) return;
-  guardando.value = true;
-  error.value = '';
-  mensaje.value = '';
   try {
-    const res = await fetch(`${API_URL}/clientes`, {
+    const res = await fetch('http://localhost:4000/api/clientes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...auth.encabezadosAutenticados() },
       body: JSON.stringify(nuevo.value)
     });
-    const resultado = await res.json();
-    if (!res.ok) throw new Error(resultado.error || 'No se pudo guardar el cliente.');
-    nuevo.value = { nombre: '', telefono: '', email: '' };
-    mensaje.value = 'El cliente se guardó correctamente en la base de datos.';
-    await cargarClientes();
-  } catch (err) {
-    error.value = err.message || 'No se pudo conectar con el servidor.';
-  } finally {
-    guardando.value = false;
+    if (res.ok) {
+      nuevo.value = { nombre: '', telefono: '', email: '' };
+      cargarClientes();
+    }
+  } catch (error) {
+    console.error("Error al guardar cliente:", error);
   }
 };
 
@@ -159,8 +140,6 @@ onMounted(cargarClientes);
 .client-details { font-size: 0.85rem; color: #5c5559; }
 .empty-state { text-align: center; padding: 40px 20px; }
 .empty-icon { font-size: 2.5rem; display: block; margin-bottom: 12px; }
-.form-error { margin: 0; color: #a32d3d; font-size: .9rem; }
-.form-success { margin: 0; color: #28764b; font-size: .9rem; }
 .btn-esther {
   background: linear-gradient(135deg, #d8839e 0%, #b3637e 100%); color: white; border: none; padding: 12px;
   border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 6px 20px rgba(216, 131, 158, 0.3);

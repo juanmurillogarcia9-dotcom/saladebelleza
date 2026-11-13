@@ -2,40 +2,54 @@ require('dotenv').config();
 
 const API_URL = process.env.API_URL || 'http://localhost:4000/api';
 
-async function comprobarRuta(ruta, opciones, estadoEsperado) {
-  const respuesta = await fetch(`${API_URL}${ruta}`, opciones);
-  const contenido = await respuesta.json();
-  if (respuesta.status !== estadoEsperado) {
-    throw new Error(`${ruta}: se esperaba HTTP ${estadoEsperado}, se recibió HTTP ${respuesta.status}.`);
-  }
-  return contenido;
-}
-
 async function probarSistema() {
-  const servicios = await comprobarRuta('/servicios', {}, 200);
-  if (!Array.isArray(servicios) || servicios.length === 0) {
-    throw new Error('El catálogo de servicios no devolvió datos.');
-  }
+  const email = process.env.PRUEBA_EMAIL;
+  const password = process.env.PRUEBA_PASSWORD;
+  if (!email || !password) throw new Error('Define PRUEBA_EMAIL y PRUEBA_PASSWORD en backend/.env');
 
-  const estilistas = await comprobarRuta('/estilistas', {}, 200);
-  if (!Array.isArray(estilistas)) {
-    throw new Error('El endpoint de estilistas no devolvió una lista.');
-  }
-
-  await comprobarRuta('/citas', {}, 401);
-  await comprobarRuta('/disponibilidad', {}, 401);
-  await comprobarRuta('/auth/register', {
+  let respuesta = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({})
-  }, 400);
+    body: JSON.stringify({ email, password, rol: 'cliente' })
+  });
+  let sesion = await respuesta.json();
 
-  console.log('API disponible; servicios y estilistas cargan correctamente.');
-  console.log('Citas y disponibilidad están protegidas y el registro valida los datos requeridos.');
-  console.log('Comprobación de solo lectura: no se crearon cuentas ni citas en Atlas.');
+  if (!respuesta.ok) {
+    respuesta = await fetch(`${API_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre: 'Cliente de prueba',
+        telefono: process.env.PRUEBA_TELEFONO || '3000000000',
+        email,
+        password,
+        rol: 'cliente'
+      })
+    });
+    sesion = await respuesta.json();
+  }
+  if (!respuesta.ok) throw new Error(sesion.error || 'No se pudo iniciar la sesión de prueba');
+
+  const respuestaEstilistas = await fetch(`${API_URL}/estilistas`);
+  const estilistas = await respuestaEstilistas.json();
+  if (!respuestaEstilistas.ok || !estilistas.length) throw new Error('No hay estilistas disponibles');
+
+  const respuestaCita = await fetch(`${API_URL}/citas`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${sesion.token}`
+    },
+    body: JSON.stringify({
+      servicioId: 'coloracion-balayage',
+      estilistaId: estilistas[0]._id,
+      fecha: '2026-10-15',
+      horaInicio: '11:00'
+    })
+  });
+  const cita = await respuestaCita.json();
+  if (!respuestaCita.ok) throw new Error(cita.error || 'No se pudo agendar la cita');
+  console.log(`Cita de prueba agendada: ${cita.cita.horaInicio} - ${cita.cita.horaFin}`);
 }
 
-probarSistema().catch((error) => {
-  console.error('La comprobación de la API falló:', error.message);
-  process.exitCode = 1;
-});
+probarSistema().catch((error) => console.error('Ocurrió un error:', error.message));

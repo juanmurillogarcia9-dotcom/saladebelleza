@@ -1,11 +1,5 @@
-# Frontend
+# Vue 3 + Vite
 
-Interfaz de Salon de Belleza Esther, construida con Vue 3, Vite y Quasar.
+This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
 
-## Comandos
-
-- `npm install`: instala las dependencias del frontend.
-- `npm run dev`: inicia el servidor de desarrollo.
-- `npm run build`: valida y genera la aplicacion para produccion en `dist/`.
-
-La estructura de pantallas, rutas, componentes, configuracion de API y estado se encuentra en `src/`. Consulta el [README principal](../README.md) para conocer la estructura completa y como iniciar el backend de MongoDB.
+Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).

@@ -14,6 +14,7 @@
           <router-link v-if="auth.usuario?.rol === 'cliente'" to="/agendar" class="nav-item">Agendar Cita</router-link>
           <router-link v-if="auth.usuario?.rol === 'estilista'" to="/clientes" class="nav-item">Clientes</router-link>
           <router-link to="/servicios" class="nav-item">Servicios</router-link>
+          <router-link to="/galeria" class="nav-item">Galería</router-link>
           <router-link to="/nosotros" class="nav-item">Nosotros</router-link>
           <button class="nav-action" type="button" @click="salir">Salir, {{ auth.usuario.nombre }}</button>
         </div>
@@ -35,9 +36,8 @@ const auth = useAuthStore()
 const router = useRouter()
 
 function salir() {
-  const rol = auth.usuario?.rol === 'estilista' ? 'estilista' : 'cliente'
   auth.cerrarSesion()
-  router.replace({ name: 'Login', query: { rol } })
+  router.push('/login')
 }
 </script>
 

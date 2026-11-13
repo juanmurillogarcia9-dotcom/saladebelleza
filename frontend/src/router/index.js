@@ -3,6 +3,7 @@ import AgendaView from '../views/AgendaView.vue'
 import AgendarCitaView from '../views/AgendarCitaView.vue'
 import ClientesView from '../views/ClientesView.vue'
 import ServiciosView from '../views/ServiciosView.vue'
+import GaleriaView from '../views/GaleriaView.vue'
 import NosotrosView from '../views/NosotrosView.vue'
 import LoginView from '../views/LoginView.vue'
 import { useAuthStore } from '../stores/authStore'
@@ -13,6 +14,7 @@ const routes = [
     { path: '/agendar', name: 'Agendar', component: AgendarCitaView, meta: { rol: 'cliente' } },
     { path: '/clientes', name: 'Clientes', component: ClientesView, meta: { rol: 'estilista' } },
     { path: '/servicios', name: 'Servicios', component: ServiciosView },
+    { path: '/galeria', name: 'Galeria', component: GaleriaView },
     { path: '/nosotros', name: 'Nosotros', component: NosotrosView }
 ]
 
@@ -23,9 +25,6 @@ const router = createRouter({
 
 router.beforeEach((to) => {
     const auth = useAuthStore()
-    if (auth.token && auth.token.split('.').length !== 3) {
-        auth.cerrarSesion()
-    }
     if (auth.token && auth.usuario && to.name === 'Login') {
         return auth.usuario.rol === 'estilista' ? { name: 'Agenda' } : { name: 'Agendar' }
     }

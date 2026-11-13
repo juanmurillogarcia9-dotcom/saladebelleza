@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { API_URL } from '../config/api'
-import { useSalonStore } from './salonStore'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
 export const useAuthStore = defineStore('auth', () => {
     const token = ref('')
@@ -20,22 +20,16 @@ export const useAuthStore = defineStore('auth', () => {
             throw new Error('No se pudo conectar con el servidor. Inicia el backend en el puerto 4000.')
         }
 
-        const contentType = response.headers.get('content-type') || ''
-        if (!contentType.includes('application/json')) {
-            throw new Error(`El servidor de API (${API_URL}) devolvió HTML en vez de JSON. Verifica la URL y que el backend esté ejecutándose.`)
+        let resultado
+        try {
+            resultado = await response.json()
+        } catch (error) {
+            console.error('El backend devolvió una respuesta no válida:', error)
+            throw new Error('El servidor respondió de forma inesperada. Revisa la terminal del backend.')
         }
-
-        const resultado = await response.json()
 
         if (!response.ok) throw new Error(resultado.error || 'No se pudo completar la solicitud')
-        if (!resultado.token || !resultado.usuario) {
-            throw new Error('El servidor no devolvió los datos de sesión esperados.')
-        }
-        if (resultado.usuario.rol !== datos.rol) {
-            throw new Error(`Esta cuenta no puede entrar como ${datos.rol}. Usa el apartado de ${resultado.usuario.rol}.`)
-        }
 
-        useSalonStore().limpiarDatos()
         token.value = resultado.token
         usuario.value = resultado.usuario
         return resultado.usuario
@@ -52,7 +46,6 @@ export const useAuthStore = defineStore('auth', () => {
     function cerrarSesion() {
         token.value = ''
         usuario.value = null
-        useSalonStore().limpiarDatos()
     }
 
     function encabezadosAutenticados() {
